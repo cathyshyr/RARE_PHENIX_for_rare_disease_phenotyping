@@ -1,7 +1,11 @@
 # RARE-PHENIX for Rare Disease Phenotyping
 
-**Please Note:** The original dataset used in this project contains patient-sensitive data from the Undiagnosed Diseases network and is **not included**. The expected data format is as follows:
-The Undiagnosed Diseases Network data used in this study contain sensitive patient information. De-identified patient data, including phenotypic and genomic data, are deposited in the \href{https://www.ncbi.nlm.nih.gov/gap/}{database of Genotypes and Phenotypes (dbGaP)} maintained by the National Institutes of Health. To explore data available in the latest release, visit the \href{https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study\_id=phs001232.v7.p3}{UDN study page in dbGaP}. Individuals interested in accessing UDN data through dbGaP should submit a data access request. Detailed instructions for this process can be found on the NIH Scientific Data Sharing website: \href{https://sharing.nih.gov/accessing-data/accessing-genomic-data/how-to-request-and-access-datasets-from-dbgap}{How to Request and Access Datasets from dbGaP}.
+**Please Note:** The Undiagnosed Diseases Network (UDN) data used in this study contain sensitive patient information. De-identified patient data, including phenotypic and genomic data, are deposited in the [database of Genotypes and Phenotypes (dbGaP)](https://www.ncbi.nlm.nih.gov/gap/) maintained by the National Institutes of Health.
+
+To explore data available in the latest release, visit the [UDN study page in dbGaP](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs001232.v7.p3).
+
+Individuals interested in accessing UDN data through dbGaP should submit a data access request. Detailed instructions for this process can be found on the NIH Scientific Data Sharing website: [How to Request and Access Datasets from dbGaP](https://sharing.nih.gov/accessing-data/accessing-genomic-data/how-to-request-and-access-datasets-from-dbgap).
+
 # Expected Data Format
 - `UID` – patient identifier  
 - `note_date` - date of the clinical note 

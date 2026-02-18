@@ -1,8 +1,7 @@
 # RARE-PHENIX for Rare Disease Phenotyping
 
-**Please Note:** The original dataset used in this project contains patient-sensitive data from the Undiagnosed Diseases network and is **not included**.  
-The expected data format is as follows:
-
+**Please Note:** The original dataset used in this project contains patient-sensitive data from the Undiagnosed Diseases network and is **not included**. The expected data format is as follows:
+The Undiagnosed Diseases Network data used in this study contain sensitive patient information. De-identified patient data, including phenotypic and genomic data, are deposited in the \href{https://www.ncbi.nlm.nih.gov/gap/}{database of Genotypes and Phenotypes (dbGaP)} maintained by the National Institutes of Health. To explore data available in the latest release, visit the \href{https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study\_id=phs001232.v7.p3}{UDN study page in dbGaP}. Individuals interested in accessing UDN data through dbGaP should submit a data access request. Detailed instructions for this process can be found on the NIH Scientific Data Sharing website: \href{https://sharing.nih.gov/accessing-data/accessing-genomic-data/how-to-request-and-access-datasets-from-dbgap}{How to Request and Access Datasets from dbGaP}.
 # Expected Data Format
 - `UID` – patient identifier  
 - `note_date` - date of the clinical note 

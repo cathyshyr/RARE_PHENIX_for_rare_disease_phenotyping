@@ -1,13 +1,13 @@
-# RARE-PHENIX Clinical Note Pipeline
+# RARE-PHENIX for Rare Disease Phenotyping
 
-This repository contains code for:
+**Please Note:** The original dataset used in this project contains patient-sensitive data from the Undiagnosed Diseases network and is **not included**.  
+The expected data format is as follows:
 
-- preprocessing clinical notes  
-- instruction fine-tuning a large language model  
-- running the multi-module RARE-PHENIX inference pipeline  
-
-⚠️ **Note:** The original dataset used in this project is sensitive and is **not included**.  
-Users must supply their own data in the expected format.
+# Expected Data Format
+- `UID` – patient identifier  
+- `note_date` - date of the clinical note 
+- `note_title` - title of the clinical note
+- `note_text` - content of the clinical note
 
 ---
 
@@ -114,15 +114,4 @@ Performs final-stage inference.
 - Produce the final structured predictions  
 
 ---
-
-# Expected Data Format
-
-Since the original dataset cannot be shared, input data should follow the structure below.
-
-### For preprocessing
-
-- `UID` – patient identifier  
-- `note_date`  
-- `note_title`  
-- `note_text`  
 

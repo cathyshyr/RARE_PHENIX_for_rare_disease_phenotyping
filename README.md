@@ -98,14 +98,15 @@ Post-processes Module 2 outputs into a clean structured format for Module 3.
 #### `RARE_PHENIX_Module3_Preprocess.py`
 
 **Typical responsibilities:**
-- Merge and reformat outputs from Module 2  
+- Create negative HPO sets for training the learning-to-rank model
+- Prepares data matrix for model training and validation
 
 #### `RARE_PHENIX_Module3.py`
 
 Prioritization of Diagnostically Informative Phenotypes
 
 **Typical responsibilities:**
-- Run the learning-to-rank model
+- Trains, validates, and selects the best-performing learning-to-rank model based on mean average precision
 
 
 ---

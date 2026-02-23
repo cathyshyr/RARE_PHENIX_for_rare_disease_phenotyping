@@ -10,19 +10,19 @@
 
 ---
 
-# Project Structure
+# RARE-PHENIX Pipeline Structure
 
 ## Preprocessing & Training
 
 ### `Preprocess_Clinical_Notes.py`
 
-Prepares raw clinical notes for downstream processing.
+Prepares clinical notes for downstream processing.
 
 **Main steps:**
 - Load the raw notes file  
 - Filter notes by title and content  
 - Remove unwanted sections (e.g., signatures, administrative text)  
-- Concatenate notes by patient (`UID`)  
+- Concatenate notes by patient identifier (`UID`)  
 - Split long documents into smaller chunks  
 - Create multiple subsets for parallel processing  
 
@@ -33,15 +33,15 @@ Prepares raw clinical notes for downstream processing.
 
 ### `Instruction_Fine_Tuning.py`
 
-Performs supervised fine-tuning of a base LLM using LoRA.
+Performs supervised fine-tuning of a pre-trained LLM.
 
 **Main steps:**
-- Load the base instruction model  
+- Load the pre-trained LLM
 - Load training and evaluation datasets  
 - Format each example into an instruction/chat template  
 - Apply LoRA for parameter-efficient fine-tuning  
 - Run training with the Hugging Face `Trainer`  
-- Save the fine-tuned adapter  
+- Save the fine-tuned model  
 
 **Output:**
 - Fine-tuned LoRA checkpoint  
@@ -50,7 +50,7 @@ Performs supervised fine-tuning of a base LLM using LoRA.
 
 ## RARE-PHENIX Inference Pipeline
 
-The pipeline is divided into three modules.  
+The framework is divided into three modules.  
 Each module includes a main script and a post-processing script.
 
 ---
@@ -59,7 +59,7 @@ Each module includes a main script and a post-processing script.
 
 #### `RARE_PHENIX_Module1.py`
 
-Runs first-stage model inference on the preprocessed notes.
+Phenotype Extraction from Clinical Notes
 
 **Typical responsibilities:**
 - Load the fine-tuned model  
@@ -72,7 +72,7 @@ Cleans and structures the raw outputs from Module 1.
 
 **Typical responsibilities:**
 - Parse model generations  
-- Remove formatting artifacts  
+- Remove formatting artifacts (e.g., HTML span tags)
 - Convert outputs into a structured format for the next module  
 
 ---
@@ -81,12 +81,11 @@ Cleans and structures the raw outputs from Module 1.
 
 #### `RARE_PHENIX_Module2.py`
 
-Runs second-stage inference using outputs from Module 1.
+Standardization to Human Phenotype Ontology (HPO) Terms
 
 **Typical responsibilities:**
-- Load intermediate results  
-- Perform additional model prompting or aggregation  
-- Produce refined predictions  
+- Load results from Module 1
+- Perform entity linking of free-text strings to structured HPO terms using retrieval-augmented generation
 
 #### `RARE_PHENIX_Module2_Postprocess.py`
 
@@ -98,19 +97,16 @@ Post-processes Module 2 outputs into a clean structured format for Module 3.
 
 #### `RARE_PHENIX_Module3_Preprocess.py`
 
-Prepares inputs for the final module.
-
 **Typical responsibilities:**
 - Merge and reformat outputs from Module 2  
-- Construct the final prompt/input structure  
 
 #### `RARE_PHENIX_Module3.py`
 
-Performs final-stage inference.
+Prioritization of Diagnostically Informative Phenotypes
 
 **Typical responsibilities:**
-- Run the model on the fully aggregated context  
-- Produce the final structured predictions  
+- Run the learning-to-rank model
+
 
 ---
 

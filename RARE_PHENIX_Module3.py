@@ -1,12 +1,22 @@
 """
-Train an HPO term ranking model (XGBoost pairwise ranker) using:
+Train HPO term ranking models using:
 - Positives: physician-curated HPO terms per patient (from 'HPO term IDs')
-- Negatives: the four negative sets generated per patient from RARE_PHENIX_Module3_Preprocess.py:
+- Negatives: pre-generated negative sets per patient:
     neg_hpo_ids_hard / medium / easy / implausible
 
+This script trains and SAVES multiple models (for later evaluation in a separate script):
+- XGBoost rank:pairwise (LTR)
+- LightGBM LambdaRank (LTR)  [optional if installed]
+- CatBoost YetiRankPairwise (LTR) [optional if installed]
+- Logistic Regression (pointwise baseline)
+
+It ALSO:
+- Computes validation MAP@30 for each trained model on the held-out validation split
+- Prints a results table
+
 Outputs:
-- XGBoost model file (.xgb)
-- Preprocessing bundle (feature columns, one-hot columns, fill values) as JSON
+- Model files under OUT_DIR
+- Preprocessing bundle JSON (feature columns, fill defaults, model paths, params, validation results)
 - (Optional) training dataframe parquet/csv for auditing
 """
 
@@ -17,47 +27,65 @@ import random
 import numpy as np
 import pandas as pd
 import xgboost as xgb
-from collections import defaultdict, deque
-from functools import lru_cache
+import joblib
+
 from sklearn.model_selection import GroupShuffleSplit
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
 
 from pyhpo import Ontology
+
+# Optional deps (skip gracefully if not installed)
+try:
+    import lightgbm as lgb
+    HAS_LGB = True
+except Exception:
+    HAS_LGB = False
+
+try:
+    from catboost import CatBoostRanker, Pool
+    HAS_CAT = True
+except Exception:
+    HAS_CAT = False
 
 # ============================================================
 # 0) Configuration
 # ============================================================
 RANDOM_SEED = 33
 
-# Input training table (with negatives already created)
 NEG_DATA_PATH = "UDN_patients_with_negative_hpo_sets.csv"
 
-# Demographics
 DEMOGRAPHICS_CSV = "./Demographics_Report_2024-07-14T10-30-39.737Z.csv"  # set None to disable
 UDN_ID_MAP_TSV   = "./UDN ID map.txt"                                    # set None to disable
-DEMOG_UID_COL_IN_NEGDATA = "UDN ID"  # column in NEG_DATA_PATH
-DEMOG_UID_COL_IN_DEMOG   = "UID"     # after merging UDN map, we expect a "UID" column
 
-# Optional OMIM/Orphanet usage table
 OMIM_ORPHA_USAGE_TSV = "./RankingAlgorithm/HPO terms used in OMIM or Orpha.txt"  # set None to disable
 
-# Where to save model + preprocessing bundle
 OUT_DIR = "./RankingAlgorithm"
-MODEL_PATH = os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026.xgb")
-PREP_PATH  = os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026_preprocess.json")
+MODEL_PATHS = {
+    "xgboost_pairwise": os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026_xgb.xgb"),
+    "lightgbm_lambdarank": os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026_lgb.txt"),
+    "catboost_yetirank": os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026_cat.cbm"),
+    "logreg_pointwise": os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026_logreg.joblib"),
+}
 
-# Audit outputs (optional)
+VAL_RESULTS_CSV = os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026_validation_results.csv")
+
+MODELS_TO_TRAIN = [
+    "xgboost_pairwise",
+    "lightgbm_lambdarank",
+    "catboost_yetirank",
+    "logreg_pointwise",
+]
+
+PREP_PATH = os.path.join(OUT_DIR, "UDN_HPO_Ranker_2026_preprocess.json")
+
 SAVE_TRAIN_TABLE = True
 TRAIN_TABLE_PATH = os.path.join(OUT_DIR, "UDN_HPO_Ranker_TrainingTable_2026.parquet")
 
-# Negative sampling ratios
-NEG_CAPS = {
-    "hard": 10,
-    "medium": 15,
-    "easy": 15,
-    "implausible": 10,
-}
+NEG_CAPS = {"hard": 10, "medium": 15, "easy": 15, "implausible": 10}
 
-# XGBoost tuning grid 
 ETA_VALS       = [0.03, 0.07, 0.1]
 MAX_DEPTH_VALS = [3, 6]
 ALPHA_VALS     = [0.0, 0.5, 1.0]
@@ -65,7 +93,7 @@ LAMBDA_VALS    = [1.0, 5.0, 10.0]
 
 EARLY_STOPPING_ROUNDS = 25
 MAX_BOOST_ROUNDS      = 2000
-EVAL_METRIC           = "map@30"  # good default for ranking
+EVAL_METRIC           = "map@30"
 
 # ============================================================
 # 1) Helpers: HPO parsing + Ontology-safe IDs
@@ -81,7 +109,6 @@ def parse_hpo_ids(s):
     return HPO_RE.findall(str(s))
 
 def as_int_hpo_id(x):
-    """Normalize to integer id (e.g., 421) from term obj or string 'HP:0000421'."""
     if hasattr(x, "id"):
         x = x.id
     if isinstance(x, int):
@@ -97,9 +124,6 @@ def as_int_hpo_id(x):
             return int(m.group(1))
     raise ValueError(f"Can't parse HPO id from: {x} ({type(x)})")
 
-def int_to_hp(i):
-    return f"HP:{as_int_hpo_id(i):07d}"
-
 def get_term_obj(hp_str):
     return Ontology.get_hpo_object(as_int_hpo_id(hp_str))
 
@@ -107,12 +131,6 @@ def get_term_obj(hp_str):
 # 2) Optional OMIM/Orphanet usage dict
 # ============================================================
 def load_omim_orpha_usage(path):
-    """
-    Expected columns:
-      term_id
-      N_OMIM_diseases_with_term, frac_OMIM_diseases_with_term
-      N_Orpha_diseases_with_term, frac_Orpha_diseases_with_term
-    """
     if path is None or (not os.path.exists(path)):
         return None
 
@@ -147,68 +165,47 @@ def load_demographics(demo_csv, udn_map_tsv):
         return None
 
     dem = pd.read_csv(demo_csv)
-    dem = dem.rename(columns={"UDN ID": "UID_long"})  
+    dem = dem.rename(columns={"UDN ID": "UID_long"})
     m = pd.read_csv(udn_map_tsv, delimiter="\t")
-
     dem = pd.merge(m, dem, on="UID_long", how="inner")
-
-    # We expect columns like:
-    #  "UID" (short)
-    #  "Age at Application"
-    #  "Sex"
-    #  "Primary Symptom Category (App Review)"
     return dem
 
 DEMOG = load_demographics(DEMOGRAPHICS_CSV, UDN_ID_MAP_TSV)
 
 # ============================================================
-# 4) Build training table: one row per (patient, candidate HPO term)
+# 4) Build training table
 # ============================================================
 def cap_list(lst, k, rng):
-    if k is None:
-        return lst
-    if len(lst) <= k:
+    if k is None or len(lst) <= k:
         return lst
     return rng.sample(lst, k)
 
 def build_training_table(df_negs, rng):
-    """
-    Returns a dataframe with columns:
-      UID, term_hp, label,
-      neg_type (pos/hard/medium/easy/implausible),
-      plus optional demographics columns
-    """
     rows = []
-    for i, row in df_negs.iterrows():
+    for _, row in df_negs.iterrows():
         uid = row.get("UDN ID", None)
         if pd.isna(uid):
             continue
 
-        pos = parse_hpo_ids(row.get("HPO term IDs", ""))
-
+        pos  = parse_hpo_ids(row.get("HPO term IDs", ""))
         hard = parse_hpo_ids(row.get("neg_hpo_ids_hard", ""))
         med  = parse_hpo_ids(row.get("neg_hpo_ids_medium", ""))
         easy = parse_hpo_ids(row.get("neg_hpo_ids_easy", ""))
         impl = parse_hpo_ids(row.get("neg_hpo_ids_implausible", ""))
 
-        # cap negatives per type (keeps training balanced & predictable)
         hard = cap_list(hard, NEG_CAPS["hard"], rng)
         med  = cap_list(med,  NEG_CAPS["medium"], rng)
         easy = cap_list(easy, NEG_CAPS["easy"], rng)
         impl = cap_list(impl, NEG_CAPS["implausible"], rng)
 
-        # Avoid duplicates & any accidental collisions with positives
         pos_set = set(pos)
         hard = [t for t in hard if t not in pos_set]
         med  = [t for t in med  if t not in pos_set]
         easy = [t for t in easy if t not in pos_set]
         impl = [t for t in impl if t not in pos_set]
 
-        # Add positives
         for t in pos:
             rows.append({"UID": uid, "term_hp": t, "label": 1, "neg_type": "pos"})
-
-        # Add negatives
         for t in hard:
             rows.append({"UID": uid, "term_hp": t, "label": 0, "neg_type": "hard"})
         for t in med:
@@ -220,32 +217,25 @@ def build_training_table(df_negs, rng):
 
     out = pd.DataFrame(rows)
 
-    # Optional: merge demographics
-    if DEMOG is not None:
-  
-        # We'll try two merges:
-        #   1) if df_negs UID matches DEMOG["UID_long"], use that.
-        #   2) else, if df_negs UID matches DEMOG["UID"], use that.
-        if "UID_long" in DEMOG.columns:
-            # attempt merge by UID_long first
-            dem1 = DEMOG[["UID_long", "UID", "Age at Application", "Sex", "Primary Symptom Category (App Review)"]].drop_duplicates()
-            out = out.merge(dem1, left_on="UID", right_on="UID_long", how="left")
-            # if that didn't hit, try by short UID
-            miss = out["Age at Application"].isna().mean()
-            if miss > 0.5 and "UID" in DEMOG.columns:
-                dem2 = DEMOG[["UID", "Age at Application", "Sex", "Primary Symptom Category (App Review)"]].drop_duplicates()
-                out = out.drop(columns=["UID_long", "UID_y"], errors="ignore")
-                out = out.rename(columns={"UID_x": "UID"})
-                out = out.merge(dem2, on="UID", how="left")
-            else:
-                out = out.rename(columns={"UID_x": "UID"}).drop(columns=["UID_long", "UID_y"], errors="ignore")
+    if DEMOG is not None and len(out) > 0 and "UID_long" in DEMOG.columns:
+        dem1 = DEMOG[["UID_long", "UID", "Age at Application", "Sex",
+                      "Primary Symptom Category (App Review)"]].drop_duplicates()
+        out = out.merge(dem1, left_on="UID", right_on="UID_long", how="left")
 
-        # rename to stable feature names
+        miss = out["Age at Application"].isna().mean()
+        if miss > 0.5 and "UID" in DEMOG.columns:
+            dem2 = DEMOG[["UID", "Age at Application", "Sex",
+                          "Primary Symptom Category (App Review)"]].drop_duplicates()
+            out = out.drop(columns=["UID_long", "UID_y"], errors="ignore")
+            out = out.rename(columns={"UID_x": "UID"})
+            out = out.merge(dem2, on="UID", how="left")
+        else:
+            out = out.rename(columns={"UID_x": "UID"}).drop(columns=["UID_long", "UID_y"], errors="ignore")
+
         out = out.rename(columns={
             "Age at Application": "Age",
             "Primary Symptom Category (App Review)": "Primary_Category"
         })
-        # normalize Sex
         if "Sex" in out.columns:
             out["Sex"] = out["Sex"].astype(str).str.lower()
 
@@ -255,7 +245,6 @@ rng = random.Random(RANDOM_SEED)
 df_negs = pd.read_csv(NEG_DATA_PATH)
 train_df = build_training_table(df_negs, rng)
 
-# Drop patients with no positives (shouldn't happen, but safe)
 pos_counts = train_df.groupby("UID")["label"].sum()
 keep_uids = pos_counts[pos_counts > 0].index
 train_df = train_df[train_df["UID"].isin(keep_uids)].reset_index(drop=True)
@@ -267,31 +256,22 @@ print("Training rows:", len(train_df), "Patients:", train_df["UID"].nunique(),
 # 5) Feature engineering per term
 # ============================================================
 def compute_term_features(term_hp):
-    """
-    Returns a dict of term-level features (floats/ints).
-    Uses pyhpo Ontology (IC, genes, OMIM diseases) and optional OMIM/Orpha usage table.
-    """
     try:
         term = get_term_obj(term_hp)
     except Exception:
         term = None
 
     feats = {}
-
-    # --- IC (OMIM) ---
     ic = 0.0
     n_genes = 0
     n_omim_diseases = 0
     has_known_gene = 0
 
     if term is not None:
-        # IC access differs across pyhpo versions; try a couple patterns
         try:
-            # many versions: term.information_content.omim
             ic = float(term.information_content.omim)
         except Exception:
             try:
-                # some versions: term.information_content['omim']
                 ic = float(term.information_content["omim"])
             except Exception:
                 ic = 0.0
@@ -313,16 +293,17 @@ def compute_term_features(term_hp):
     feats["n_omim_diseases"] = n_omim_diseases
     feats["has_known_gene"] = has_known_gene
 
-    # --- OMIM/Orpha usage table features (optional) ---
     if USAGE_DICT is None:
-        feats["N_OMIM_diseases_with_term"] = 0.0
-        feats["frac_OMIM_diseases_with_term"] = 0.0
-        feats["N_Orpha_diseases_with_term"] = 0.0
-        feats["frac_Orpha_diseases_with_term"] = 0.0
-        feats["Any_frac_OMIM_Orpha"] = 0.0
-        feats["OMIM_idf"] = 0.0
-        feats["Orpha_idf"] = 0.0
-        feats["Any_idf_OMIM_Orpha"] = 0.0
+        feats.update({
+            "N_OMIM_diseases_with_term": 0.0,
+            "frac_OMIM_diseases_with_term": 0.0,
+            "N_Orpha_diseases_with_term": 0.0,
+            "frac_Orpha_diseases_with_term": 0.0,
+            "Any_frac_OMIM_Orpha": 0.0,
+            "OMIM_idf": 0.0,
+            "Orpha_idf": 0.0,
+            "Any_idf_OMIM_Orpha": 0.0,
+        })
         return feats
 
     tid = as_int_hpo_id(term_hp)
@@ -347,9 +328,7 @@ def compute_term_features(term_hp):
 
     return feats
 
-# Compute features with a simple cache for speed
 _feature_cache = {}
-
 def get_features_cached(term_hp):
     if term_hp in _feature_cache:
         return _feature_cache[term_hp]
@@ -358,12 +337,10 @@ def get_features_cached(term_hp):
     return feats
 
 print("Computing term-level features...")
-feat_dicts = [get_features_cached(t) for t in train_df["term_hp"].tolist()]
-feat_df = pd.DataFrame(feat_dicts)
+feat_df = pd.DataFrame([get_features_cached(t) for t in train_df["term_hp"].tolist()])
 train_df = pd.concat([train_df, feat_df], axis=1)
 
-# Patient-level covariates (optional)
-# If demographics weren't merged, these may not exist; create safe defaults.
+# Safe defaults
 if "Age" not in train_df.columns:
     train_df["Age"] = 0.0
 if "Sex" not in train_df.columns:
@@ -371,13 +348,11 @@ if "Sex" not in train_df.columns:
 if "Primary_Category" not in train_df.columns:
     train_df["Primary_Category"] = "unknown"
 
-# One-hot encode
 train_df["Sex"] = train_df["Sex"].fillna("unknown").astype(str).str.lower()
 train_df["Primary_Category"] = train_df["Primary_Category"].fillna("unknown").astype(str)
 
 train_df = pd.get_dummies(train_df, columns=["Sex", "Primary_Category"], drop_first=True)
 
-# Fill NaNs in numeric
 numeric_cols = [
     "Age", "IC", "n_genes", "n_omim_diseases", "has_known_gene",
     "N_OMIM_diseases_with_term", "frac_OMIM_diseases_with_term",
@@ -388,32 +363,49 @@ for c in numeric_cols:
     if c in train_df.columns:
         train_df[c] = train_df[c].fillna(0.0)
 
-# Feature columns used for training
 feature_cols = (
     numeric_cols
     + [c for c in train_df.columns if c.startswith("Sex_")]
     + [c for c in train_df.columns if c.startswith("Primary_Category_")]
 )
 
+# --- CRITICAL: robustly eliminate any remaining NaNs in features (fixes LR crash) ---
+train_df[feature_cols] = train_df[feature_cols].apply(pd.to_numeric, errors="coerce").replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
 # ============================================================
-# 6) Build group-aware train/val split + train XGBoost ranker
+# 6) Group-aware train/val split
 # ============================================================
 X = train_df[feature_cols].values
-y = train_df["label"].values
+y = train_df["label"].values.astype(int)
 groups = train_df["UID"].values
 
 gss = GroupShuffleSplit(n_splits=1, test_size=0.2, random_state=RANDOM_SEED)
 train_idx, val_idx = next(gss.split(X, y, groups))
 
-dtrain = xgb.DMatrix(X[train_idx], label=y[train_idx])
-_, grp_counts_train = np.unique(groups[train_idx], return_counts=True)
-dtrain.set_group(grp_counts_train)
+def group_sizes_from_group_ids(group_ids):
+    _, counts = np.unique(group_ids, return_counts=True)
+    return counts
 
-dval = xgb.DMatrix(X[val_idx], label=y[val_idx])
-_, grp_counts_val = np.unique(groups[val_idx], return_counts=True)
-dval.set_group(grp_counts_val)
+grp_counts_train = group_sizes_from_group_ids(groups[train_idx])
+grp_counts_val   = group_sizes_from_group_ids(groups[val_idx])
 
-def tune_and_train():
+os.makedirs(OUT_DIR, exist_ok=True)
+
+# ============================================================
+# 7) Train + save models
+# ============================================================
+trained = {}
+
+# ----------------------------
+# (A) XGBoost pairwise ranker
+# ----------------------------
+def tune_and_train_xgb():
+    dtrain = xgb.DMatrix(X[train_idx], label=y[train_idx])
+    dtrain.set_group(grp_counts_train)
+
+    dval = xgb.DMatrix(X[val_idx], label=y[val_idx])
+    dval.set_group(grp_counts_val)
+
     best_score = -1
     best_params = None
     best_rounds = None
@@ -446,49 +438,287 @@ def tune_and_train():
                         verbose_eval=False,
                     )
 
-                    # XGBoost stores best_score for the first eval_metric; for map@30 higher is better
                     score = float(bst.best_score) if bst.best_score is not None else -1
-
                     if score > best_score:
                         best_score = score
                         best_params = params
                         best_rounds = bst.best_iteration
-
-                        print(f"New best {EVAL_METRIC}={best_score:.4f} "
+                        print(f"[XGB] New best {EVAL_METRIC}={best_score:.4f} "
                               f"(eta={eta}, max_depth={md}, alpha={alpha}, lambda={lambd}, rounds={best_rounds})")
 
-    # Train final model on train+val using best rounds
     full_idx = np.concatenate([train_idx, val_idx])
     dfull = xgb.DMatrix(X[full_idx], label=y[full_idx])
-    _, grp_counts_full = np.unique(groups[full_idx], return_counts=True)
+    grp_counts_full = group_sizes_from_group_ids(groups[full_idx])
     dfull.set_group(grp_counts_full)
 
     final_bst = xgb.train(best_params, dfull, num_boost_round=best_rounds, verbose_eval=False)
-    return final_bst, best_params, best_rounds, best_score
+    return final_bst, best_params, int(best_rounds), float(best_score)
 
+if "xgboost_pairwise" in MODELS_TO_TRAIN:
+    print("Training XGBoost ranker...")
+    bst, best_params, best_rounds, best_score = tune_and_train_xgb()
+    bst.save_model(MODEL_PATHS["xgboost_pairwise"])
+    trained["xgboost_pairwise"] = {
+        "model_path": MODEL_PATHS["xgboost_pairwise"],
+        "best_params": best_params,
+        "best_rounds": best_rounds,
+        "best_score_internal_val": best_score,  # from xgb's eval
+        "notes": {"objective": "rank:pairwise", "eval_metric": EVAL_METRIC},
+    }
+    print("Saved:", MODEL_PATHS["xgboost_pairwise"])
+
+# ----------------------------
+# (B) LightGBM LambdaRank
+# ----------------------------
+def train_lgb_lambdarank():
+    if not HAS_LGB:
+        print("LightGBM not installed; skipping LightGBM.")
+        return None
+
+    lgb_train = lgb.Dataset(X[train_idx], label=y[train_idx], group=grp_counts_train, free_raw_data=False)
+    lgb_val   = lgb.Dataset(X[val_idx], label=y[val_idx], group=grp_counts_val, reference=lgb_train, free_raw_data=False)
+
+    params = {
+        "objective": "lambdarank",
+        "metric": "map",
+        "map_eval_at": [30],
+        "learning_rate": 0.05,
+        "num_leaves": 31,
+        "min_data_in_leaf": 20,
+        "feature_fraction": 0.8,
+        "bagging_fraction": 0.8,
+        "bagging_freq": 1,
+        "verbosity": -1,
+        "seed": RANDOM_SEED,
+    }
+
+    booster = lgb.train(
+        params,
+        lgb_train,
+        num_boost_round=5000,
+        valid_sets=[lgb_val],
+        valid_names=["val"],
+        callbacks=[lgb.early_stopping(stopping_rounds=50, verbose=False)],
+    )
+
+    best_iter = booster.best_iteration
+    best_score = None
+    try:
+        best_score = booster.best_score["val"]["map@30"]
+    except Exception:
+        pass
+
+    return booster, params, int(best_iter), (float(best_score) if best_score is not None else None)
+
+if "lightgbm_lambdarank" in MODELS_TO_TRAIN:
+    print("Training LightGBM LambdaRank...")
+    out = train_lgb_lambdarank()
+    if out is not None:
+        booster, params, best_iter, best_score = out
+        booster.save_model(MODEL_PATHS["lightgbm_lambdarank"])
+        trained["lightgbm_lambdarank"] = {
+            "model_path": MODEL_PATHS["lightgbm_lambdarank"],
+            "best_params": params,
+            "best_rounds": best_iter,
+            "best_score_internal_val": best_score,
+            "notes": {"objective": "lambdarank", "metric": "map@30"},
+        }
+        print("Saved:", MODEL_PATHS["lightgbm_lambdarank"])
+
+# ----------------------------
+# (C) CatBoost YetiRank (pairwise)
+# ----------------------------
+def train_cat_yetirank():
+    if not HAS_CAT:
+        print("CatBoost not installed; skipping CatBoost.")
+        return None
+
+    train_pool = Pool(X[train_idx], label=y[train_idx], group_id=groups[train_idx])
+    val_pool   = Pool(X[val_idx], label=y[val_idx], group_id=groups[val_idx])
+
+    model = CatBoostRanker(
+        loss_function="YetiRankPairwise",
+        eval_metric="MAP:top=30",
+        iterations=5000,
+        learning_rate=0.05,
+        depth=6,
+        random_seed=RANDOM_SEED,
+        verbose=False,
+        od_type="Iter",
+        od_wait=50,
+    )
+    model.fit(train_pool, eval_set=val_pool, use_best_model=True)
+
+    best_iter = int(model.get_best_iteration()) if model.get_best_iteration() is not None else None
+    best_score = None
+    try:
+        best_score = float(model.get_best_score().get("validation", {}).get("MAP:top=30", None))
+    except Exception:
+        pass
+
+    params = model.get_params()
+    return model, params, best_iter, best_score
+
+if "catboost_yetirank" in MODELS_TO_TRAIN:
+    print("Training CatBoost YetiRankPairwise...")
+    out = train_cat_yetirank()
+    if out is not None:
+        model, params, best_iter, best_score = out
+        model.save_model(MODEL_PATHS["catboost_yetirank"])
+        trained["catboost_yetirank"] = {
+            "model_path": MODEL_PATHS["catboost_yetirank"],
+            "best_params": params,
+            "best_rounds": best_iter,
+            "best_score_internal_val": best_score,
+            "notes": {"loss_function": "YetiRankPairwise", "eval_metric": "MAP:top=30"},
+        }
+        print("Saved:", MODEL_PATHS["catboost_yetirank"])
+
+# ----------------------------
+# (D) Logistic regression baseline (pointwise)
+# ----------------------------
+def train_logreg_pointwise():
+    # Imputer prevents any NaN crash; scaling helps LR stability.
+    clf = Pipeline([
+        ("imputer", SimpleImputer(strategy="constant", fill_value=0.0)),
+        ("scaler", StandardScaler(with_mean=True, with_std=True)),
+        ("lr", LogisticRegression(
+            max_iter=3000,
+            class_weight="balanced",
+            random_state=RANDOM_SEED,
+        )),
+    ])
+    clf.fit(X[train_idx], y[train_idx])
+    return clf, {"type": "Pipeline(Imputer+StandardScaler+LogReg)", "class_weight": "balanced"}
+
+if "logreg_pointwise" in MODELS_TO_TRAIN:
+    print("Training LogisticRegression baseline (pointwise)...")
+    clf, params = train_logreg_pointwise()
+    joblib.dump(clf, MODEL_PATHS["logreg_pointwise"])
+    trained["logreg_pointwise"] = {
+        "model_path": MODEL_PATHS["logreg_pointwise"],
+        "best_params": params,
+        "best_rounds": None,
+        "best_score_internal_val": None,
+        "notes": {"objective": "pointwise binary classification"},
+    }
+    print("Saved:", MODEL_PATHS["logreg_pointwise"])
+
+# ============================================================
+# 8) Validation scoring: MAP@30 computed uniformly for all models
+# ============================================================
+def average_precision_at_k(y_true_sorted, k=30):
+    """y_true_sorted is a list/array of 0/1 in predicted rank order (best first)."""
+    y_true_sorted = np.asarray(y_true_sorted)[:k]
+    if y_true_sorted.size == 0:
+        return 0.0
+    n_pos = int(np.sum(y_true_sorted))
+    if n_pos == 0:
+        return 0.0
+    precisions = []
+    hits = 0
+    for i, rel in enumerate(y_true_sorted, start=1):
+        if rel == 1:
+            hits += 1
+            precisions.append(hits / i)
+    return float(np.sum(precisions) / n_pos)
+
+def map_at_k(df_val, score_col, k=30):
+    """Compute MAP@k grouped by UID."""
+    aps = []
+    for _, g in df_val.groupby("UID", sort=False):
+        g2 = g.sort_values(score_col, ascending=False)
+        aps.append(average_precision_at_k(g2["label"].values, k=k))
+    return float(np.mean(aps)) if len(aps) else 0.0
+
+# Build a validation dataframe to score
+val_df = train_df.iloc[val_idx].copy()
+X_val = X[val_idx]
+y_val = y[val_idx]
+groups_val = groups[val_idx]
+
+# Score each trained model
+val_results = []
+
+# XGBoost score
+if "xgboost_pairwise" in trained:
+    booster = xgb.Booster()
+    booster.load_model(trained["xgboost_pairwise"]["model_path"])
+    dval = xgb.DMatrix(X_val)
+    val_df["_score_xgb"] = booster.predict(dval)
+    m = map_at_k(val_df, "_score_xgb", k=30)
+    trained["xgboost_pairwise"]["val_map@30"] = m
+    val_results.append({"model": "xgboost_pairwise", "val_map@30": m})
+
+# LightGBM score
+if "lightgbm_lambdarank" in trained and HAS_LGB:
+    booster = lgb.Booster(model_file=trained["lightgbm_lambdarank"]["model_path"])
+    val_df["_score_lgb"] = booster.predict(X_val)
+    m = map_at_k(val_df, "_score_lgb", k=30)
+    trained["lightgbm_lambdarank"]["val_map@30"] = m
+    val_results.append({"model": "lightgbm_lambdarank", "val_map@30": m})
+
+# CatBoost score
+if "catboost_yetirank" in trained and HAS_CAT:
+    model = CatBoostRanker()
+    model.load_model(trained["catboost_yetirank"]["model_path"])
+    val_df["_score_cat"] = model.predict(X_val)
+    m = map_at_k(val_df, "_score_cat", k=30)
+    trained["catboost_yetirank"]["val_map@30"] = m
+    val_results.append({"model": "catboost_yetirank", "val_map@30": m})
+
+# Logistic regression score
+if "logreg_pointwise" in trained:
+    clf = joblib.load(trained["logreg_pointwise"]["model_path"])
+    # Prefer predict_proba if available
+    if hasattr(clf, "predict_proba"):
+        val_df["_score_lr"] = clf.predict_proba(X_val)[:, 1]
+    else:
+        val_df["_score_lr"] = clf.decision_function(X_val)
+    m = map_at_k(val_df, "_score_lr", k=30)
+    trained["logreg_pointwise"]["val_map@30"] = m
+    val_results.append({"model": "logreg_pointwise", "val_map@30": m})
+
+# Results table + best model
+results_df = pd.DataFrame(val_results).sort_values("val_map@30", ascending=False).reset_index(drop=True)
 os.makedirs(OUT_DIR, exist_ok=True)
+results_df.to_csv(VAL_RESULTS_CSV, index=False)
+print("Saved validation results table:", VAL_RESULTS_CSV)
 
-print("Tuning + training ranker...")
-bst, best_params, best_rounds, best_score = tune_and_train()
+print("\n================ Validation Results ================")
+if len(results_df) == 0:
+    print("No models were trained/scored.")
+    best_model = None
+else:
+    print(results_df.to_string(index=False))
+    best_model = results_df.loc[0, "model"]
+    best_score = float(results_df.loc[0, "val_map@30"])
+    print("----------------------------------------------------")
+    print(f"Best model on validation (MAP@30): {best_model}  ({best_score:.4f})")
+print("====================================================\n")
 
-bst.save_model(MODEL_PATH)
-print("Saved model:", MODEL_PATH)
-
-# Save preprocessing bundle 
+# ============================================================
+# 9) Save preprocessing bundle (shared across models)
+# ============================================================
 prep = {
     "feature_cols": feature_cols,
     "numeric_cols": numeric_cols,
-    "best_params": best_params,
-    "best_rounds": int(best_rounds),
-    "best_score": float(best_score),
     "seed": RANDOM_SEED,
+    "models_trained": trained,
+    "validation": {
+        "metric": "MAP@30",
+        "results_table": val_results,
+        "best_model": best_model,
+        "best_model_val_map@30": (best_score if len(val_results) else None),
+        "split": {"method": "GroupShuffleSplit", "test_size": 0.2},
+    },
     "notes": {
         "labels": "1=physician-curated, 0=constructed negatives",
-        "objective": "rank:pairwise",
-        "eval_metric": EVAL_METRIC,
         "neg_caps": NEG_CAPS,
         "uses_demographics": DEMOG is not None,
         "uses_omim_orpha_usage": USAGE_DICT is not None,
+        "ranking_eval_note": "Final evaluation should be run on external test set with the chosen model.",
+        "optional_libs": {"lightgbm_installed": HAS_LGB, "catboost_installed": HAS_CAT},
     },
 }
 with open(PREP_PATH, "w") as f:
@@ -496,15 +726,14 @@ with open(PREP_PATH, "w") as f:
 
 print("Saved preprocessing bundle:", PREP_PATH)
 
-# Optional audit table (handy for debugging/inspection)
 if SAVE_TRAIN_TABLE:
     try:
         train_df.to_parquet(TRAIN_TABLE_PATH, index=False)
         print("Saved training table:", TRAIN_TABLE_PATH)
     except Exception:
-        # parquet may fail if pyarrow not installed; fall back to csv
         csv_path = TRAIN_TABLE_PATH.replace(".parquet", ".csv")
         train_df.to_csv(csv_path, index=False)
         print("Saved training table (CSV fallback):", csv_path)
 
 print("Done.")
+

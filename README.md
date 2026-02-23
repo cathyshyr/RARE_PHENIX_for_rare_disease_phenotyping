@@ -107,6 +107,7 @@ Prioritization of Diagnostically Informative Phenotypes
 
 **Typical responsibilities:**
 - Trains, validates, and selects the best-performing learning-to-rank model based on mean average precision
+- Candidate models include: XGBoost, CatBoost, LightGBM, and logistic regression
 
 
 ---

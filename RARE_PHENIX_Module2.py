@@ -74,7 +74,7 @@ def main(file_name, record_id):
     # embed_model = LangchainEmbedding(HuggingFaceEmbeddings(model_name=""))
     embeddings = LangchainEmbedding(HuggingFaceEmbeddings(model_name=embed_dir))
 
-    df = pd.read_excel('HPO_ID_TERM_DEFN.xlsx')
+    df = pd.read_excel('./data/HPO_ID_TERM_DEFN.xlsx')
     print("Step 2: RAG query engine initializing...")
     nodes = []
 

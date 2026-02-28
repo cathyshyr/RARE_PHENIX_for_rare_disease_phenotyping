@@ -57,10 +57,10 @@ RANDOM_SEED = 33
 
 NEG_DATA_PATH = "UDN_patients_with_negative_hpo_sets.csv"
 
-DEMOGRAPHICS_CSV = "./Demographics_Report_2024-07-14T10-30-39.737Z.csv"  # set None to disable
-UDN_ID_MAP_TSV   = "./UDN ID map.txt"                                    # set None to disable
+DEMOGRAPHICS_CSV = "./Demographics_Report_2024-07-14T10-30-39.737Z.csv"  # set None to disable (UDN patients' demographics file - please see README for access to UDN data)
+UDN_ID_MAP_TSV   = "./UDN ID map.txt"                                    # set None to disable (File for mapping VUMC internal patient IDs to UDN long IDs; not used for model training)
 
-OMIM_ORPHA_USAGE_TSV = "./RankingAlgorithm/HPO terms used in OMIM or Orpha.txt"  # set None to disable
+OMIM_ORPHA_USAGE_TSV = "./data/HPO terms used in OMIM or Orpha.txt"  # set None to disable (contains OMIM and Orphanet-drived ontology information used for training the learning-to-rank model)
 
 OUT_DIR = "./RankingAlgorithm"
 MODEL_PATHS = {

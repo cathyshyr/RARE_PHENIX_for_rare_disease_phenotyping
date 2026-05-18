@@ -4,7 +4,7 @@
 
 Because the Undiagnosed Diseases Network (UDN)-derived data used in this study contain sensitive patient information and are subject to controlled-access data sharing policies, we are unable to publicly release the RARE-PHENIX checkpoints fine-tuned on UDN data.
 
-To support reproducibility and academic comparison, we now provide final PEFT/LoRA adapter checkpoints for the **Llama-2 family of RARE-PHENIX models** fine-tuned **only on the public RareDis corpus**. These checkpoints are available under `/model_checkpoint_RareDis/`.
+To support reproducibility, we now provide the final PEFT/LoRA adapter checkpoints for the **Llama-2 family of RARE-PHENIX models** fine-tuned **only on the public RareDis corpus**. These checkpoints are available under `/model_checkpoint_RareDis/`.
 
 We release the `Llama-2-70b-chat-hf` RareDis-only checkpoint because this model achieved the best performance in the study based on ontology-based similarity, which was the primary outcome. We also release smaller `Llama-2-13b-chat-hf` and `Llama-2-7b-chat-hf` variants to support users with more limited computational resources and to enable comparison across model versions.
 

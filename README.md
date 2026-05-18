@@ -4,11 +4,11 @@
 
 Because the Undiagnosed Diseases Network (UDN)-derived data used in this study contain sensitive patient information and are subject to controlled-access data sharing policies, we are unable to publicly release the RARE-PHENIX checkpoints fine-tuned on UDN data.
 
-To support reproducibility, we provide the final PEFT/LoRA adapter checkpoints for RARE-PHENIX models fine-tuned **only on the public RareDis corpus**. These checkpoints are available under:
+To support reproducibility and academic comparison, we now provide final PEFT/LoRA adapter checkpoints for the **Llama-2 family of RARE-PHENIX models** fine-tuned **only on the public RareDis corpus**. These checkpoints are available under `/model_checkpoint_RareDis/`.
 
-```text
-/model_checkpoint_RareDis/
-```
+We release the `Llama-2-70b-chat-hf` RareDis-only checkpoint because this model achieved the best performance in the study based on ontology-based similarity, which was the primary outcome. We also release smaller `Llama-2-13b-chat-hf` and `Llama-2-7b-chat-hf` variants to support users with more limited computational resources and to enable comparison across model versions.
+
+Please note that these are adapter checkpoints, not standalone full model weights. To use them, users must obtain access to the corresponding Llama-2 chat base model separately.
 
 **Please Note:** The Undiagnosed Diseases Network (UDN) data used in this study contain sensitive patient information. De-identified patient data, including phenotypic and genomic data, are deposited in the [database of Genotypes and Phenotypes (dbGaP)](https://www.ncbi.nlm.nih.gov/gap/) maintained by the National Institutes of Health. To explore data available in the latest release, visit the [UDN study page in dbGaP](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs001232.v7.p3). Individuals interested in accessing UDN data through dbGaP should submit a data access request. Detailed instructions for this process can be found on the NIH Scientific Data Sharing website: [How to Request and Access Datasets from dbGaP](https://sharing.nih.gov/accessing-data/accessing-genomic-data/how-to-request-and-access-datasets-from-dbgap).
 

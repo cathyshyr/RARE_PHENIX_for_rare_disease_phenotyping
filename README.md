@@ -1,5 +1,15 @@
 # RARE-PHENIX for Rare Disease Phenotyping
 
+## Update: May 18, 2026
+
+Because the Undiagnosed Diseases Network (UDN)-derived data used in this study contain sensitive patient information and are subject to controlled-access data sharing policies, we are unable to publicly release the RARE-PHENIX checkpoints fine-tuned on UDN data.
+
+To support reproducibility, we provide the final PEFT/LoRA adapter checkpoints for RARE-PHENIX models fine-tuned **only on the public RareDis corpus**. These checkpoints are available under:
+
+```text
+/model_checkpoint_RareDis/
+```
+
 **Please Note:** The Undiagnosed Diseases Network (UDN) data used in this study contain sensitive patient information. De-identified patient data, including phenotypic and genomic data, are deposited in the [database of Genotypes and Phenotypes (dbGaP)](https://www.ncbi.nlm.nih.gov/gap/) maintained by the National Institutes of Health. To explore data available in the latest release, visit the [UDN study page in dbGaP](https://www.ncbi.nlm.nih.gov/projects/gap/cgi-bin/study.cgi?study_id=phs001232.v7.p3). Individuals interested in accessing UDN data through dbGaP should submit a data access request. Detailed instructions for this process can be found on the NIH Scientific Data Sharing website: [How to Request and Access Datasets from dbGaP](https://sharing.nih.gov/accessing-data/accessing-genomic-data/how-to-request-and-access-datasets-from-dbgap).
 
 # Expected Data Format

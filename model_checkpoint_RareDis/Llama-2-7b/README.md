@@ -38,7 +38,9 @@ tokenizer = AutoTokenizer.from_pretrained(adapter_path)
 
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_name,
-    device_map="auto"
+    device_map="auto",
+    torch_dtype="auto",
+    token=True
 )
 
 model = PeftModel.from_pretrained(base_model, adapter_path)

@@ -43,7 +43,7 @@ Prepares clinical notes for downstream processing.
 
 ### `Instruction_Fine_Tuning.py`
 
-Performs supervised fine-tuning of a pre-trained LLM.
+Performs instruction tuning of a pre-trained LLM.
 
 **Main steps:**
 - Load the pre-trained LLM

@@ -31,14 +31,16 @@ This repository contains adapter weights only. To use the model, load the base m
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-base_model_name = "meta-llama/Llama-2-13-chat-hf"
+base_model_name = "meta-llama/Llama-2-13b-chat-hf"
 adapter_path = "path/to/final_checkpoint"
 
 tokenizer = AutoTokenizer.from_pretrained(adapter_path)
 
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_name,
-    device_map="auto"
+    device_map="auto",
+    torch_dtype="auto",
+    token=True
 )
 
 model = PeftModel.from_pretrained(base_model, adapter_path)

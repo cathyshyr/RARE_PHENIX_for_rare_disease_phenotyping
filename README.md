@@ -33,6 +33,9 @@ python3 -m venv rare-phenix-env
 source rare-phenix-env/bin/activate
 python -m pip install -U pip
 python -m pip install -r requirements_module1_hf.txt
+
+# Or install dependencies for both Module 1 and lightweight Module 2:
+python -m pip install -r requirements_researcher_quickstart.txt
 hf auth login
 python scripts/run_module1_extraction.py \
   --input examples/sample_notes.csv \

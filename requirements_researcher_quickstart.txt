@@ -1,0 +1,2 @@
+-r requirements_module1_hf.txt
+-r requirements_module2_lightweight.txt

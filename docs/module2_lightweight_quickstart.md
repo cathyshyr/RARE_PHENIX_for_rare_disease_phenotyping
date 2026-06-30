@@ -46,9 +46,29 @@ Install the researcher dependencies:
 python -m pip install -r requirements_module2_lightweight.txt
 ~~~
 
-## Run Module 1 first
+## Try Module 2 directly
 
-Generate the Module 2-compatible input file:
+A standalone sample Module 2 input file is included:
+
+~~~text
+examples/sample_module1_for_module2.csv
+~~~
+
+Run lightweight Module 2 directly on this sample:
+
+~~~bash
+python scripts/run_module2_hpo_standardization.py \
+  --input examples/sample_module1_for_module2.csv \
+  --id-column UID \
+  --phenotype-column Step1_Clean_Split \
+  --hpo-terms data/HPO_ID_TERM_DEFN.xlsx \
+  --output outputs/sample_module2_hpo_candidates.csv \
+  --top-k 5
+~~~
+
+## Or run Module 1 first
+
+Generate the Module 2-compatible input file from sample clinical notes:
 
 ~~~bash
 python scripts/run_module1_extraction.py \

@@ -1,0 +1,20 @@
+
+# Local outputs
+outputs/
+tmp/
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local environments
+.env
+.venv/
+venv/
+hf-env/
+
+# Hugging Face / model caches
+.cache/
+huggingface/

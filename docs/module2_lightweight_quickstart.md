@@ -113,6 +113,20 @@ python scripts/run_module2_hpo_standardization.py \
   --top-k 5
 ~~~
 
+## Smoke test
+
+A fast smoke test is included. It uses lexical mode, so it does not need to download an embedding model.
+
+~~~bash
+python scripts/smoke_test_module2_lightweight.py
+~~~
+
+Expected output:
+
+~~~text
+SUCCESS: lightweight Module 2 smoke test passed
+~~~
+
 ## Output columns
 
 | Column | Description |

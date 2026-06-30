@@ -109,6 +109,26 @@ python scripts/run_module2_hpo_standardization.py \
 
 The first command extracts phenotype mentions from notes. The second command maps extracted phenotype strings to candidate HPO terms.
 
+## Quickstart: lightweight Module 3 HPO prioritization
+
+A lightweight Module 3 script is available to aggregate Module 2 candidates into patient-level prioritized HPO lists.
+
+~~~bash
+python scripts/run_module3_hpo_prioritization.py \
+  --input outputs/module2_hpo_candidates.csv \
+  --output outputs/module3_prioritized_hpos.csv \
+  --max-candidate-rank 5 \
+  --top-n 30
+~~~
+
+See the full quickstart:
+
+~~~text
+docs/module3_lightweight_quickstart.md
+~~~
+
+This lightweight script is intended to make the public repository runnable end-to-end. It is not the original supervised Module 3 learning-to-rank training pipeline.
+
 ## Optional validation
 
 Run the lightweight Module 2 smoke test:

@@ -21,11 +21,11 @@ shyrcathy/rare-phenix-llama2-7b-raredis
 
 Available public RareDis adapters:
 
-| Adapter | Base model | Suggested use |
-|---|---|---|
-| `shyrcathy/rare-phenix-llama2-7b-raredis` | `meta-llama/Llama-2-7b-chat-hf` | Start here; easiest to test |
-| `shyrcathy/rare-phenix-llama2-13b-raredis` | `meta-llama/Llama-2-13b-chat-hf` | Larger model; requires more memory |
-| `shyrcathy/rare-phenix-llama2-70b-raredis` | `meta-llama/Llama-2-70b-chat-hf` | Highest-resource option; use on appropriate GPU infrastructure |
+| Adapter | Base model |
+|---|---|
+| [`shyrcathy/rare-phenix-llama2-7b-raredis`](https://huggingface.co/shyrcathy/rare-phenix-llama2-7b-raredis) | `meta-llama/Llama-2-7b-chat-hf` |
+| [`shyrcathy/rare-phenix-llama2-13b-raredis`](https://huggingface.co/shyrcathy/rare-phenix-llama2-13b-raredis) | `meta-llama/Llama-2-13b-chat-hf` |
+| [`shyrcathy/rare-phenix-llama2-70b-raredis`](https://huggingface.co/shyrcathy/rare-phenix-llama2-70b-raredis) | `meta-llama/Llama-2-70b-chat-hf` |
 
 These are PEFT/LoRA adapters trained on the public RareDis corpus. They are not the full Undiagnosed Diseases Network (UDN)-trained RARE-PHENIX models described in the paper.
 

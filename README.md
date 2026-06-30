@@ -22,9 +22,9 @@ Please note that these are adapter checkpoints, not standalone full model weight
 
 # RARE-PHENIX Pipeline Structure
 
-## Quickstart: Module 1 Hugging Face adapters
+## Quickstart: public Module 1 Hugging Face adapters
 
-A runnable path is available for **RARE-PHENIX Module 1 phenotype extraction** using Hugging Face PEFT/LoRA adapters.
+A public, runnable path is available for **RARE-PHENIX Module 1 phenotype extraction** using Hugging Face PEFT/LoRA adapters.
 
 Start here:
 
@@ -47,13 +47,13 @@ See the full quickstart:
 docs/module1_hf_quickstart.md
 ~~~
 
-Available RareDis adapters:
+Available public RareDis adapters:
 
-| Adapter | Base model | Suggested use |
-|---|---|---|
-| `shyrcathy/rare-phenix-llama2-7b-raredis` | `meta-llama/Llama-2-7b-chat-hf` | Start here; easiest to test |
-| `shyrcathy/rare-phenix-llama2-13b-raredis` | `meta-llama/Llama-2-13b-chat-hf` | Larger model; requires more memory |
-| `shyrcathy/rare-phenix-llama2-70b-raredis` | `meta-llama/Llama-2-70b-chat-hf` | Highest-resource option; use on appropriate GPU infrastructure |
+| Adapter | Base model |
+|---|---|
+| [`shyrcathy/rare-phenix-llama2-7b-raredis`](https://huggingface.co/shyrcathy/rare-phenix-llama2-7b-raredis) | `meta-llama/Llama-2-7b-chat-hf` |
+| [`shyrcathy/rare-phenix-llama2-13b-raredis`](https://huggingface.co/shyrcathy/rare-phenix-llama2-13b-raredis) | `meta-llama/Llama-2-13b-chat-hf` |
+| [`shyrcathy/rare-phenix-llama2-70b-raredis`](https://huggingface.co/shyrcathy/rare-phenix-llama2-70b-raredis) | `meta-llama/Llama-2-70b-chat-hf` |
 
 These adapters are trained on the public RareDis corpus and are **not** the full Undiagnosed Diseases Network (UDN)-trained RARE-PHENIX model described in the manuscript. Users must separately have access to the corresponding gated Meta Llama-2 base model through Hugging Face.
 

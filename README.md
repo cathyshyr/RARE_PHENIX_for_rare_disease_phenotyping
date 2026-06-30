@@ -83,6 +83,29 @@ docs/module2_lightweight_quickstart.md
 
 This lightweight script is intended to be easier for researchers to run than the original RAG-based Module 2 script. It does not require running a large LLM.
 
+## Minimal Module 1 → Module 2 example
+
+Run phenotype extraction and HPO standardization on the included sample notes:
+
+~~~bash
+python scripts/run_module1_extraction.py \
+  --input examples/sample_notes.csv \
+  --id-column patient_id \
+  --text-column note_text \
+  --output outputs/module1_extracted.csv \
+  --module2-output outputs/module1_for_module2.csv
+
+python scripts/run_module2_hpo_standardization.py \
+  --input outputs/module1_for_module2.csv \
+  --id-column UID \
+  --phenotype-column Step1_Clean_Split \
+  --hpo-terms data/HPO_ID_TERM_DEFN.xlsx \
+  --output outputs/module2_hpo_candidates.csv \
+  --top-k 5
+~~~
+
+The first command extracts phenotype mentions from notes. The second command maps extracted phenotype strings to candidate HPO terms.
+
 ---
 
 

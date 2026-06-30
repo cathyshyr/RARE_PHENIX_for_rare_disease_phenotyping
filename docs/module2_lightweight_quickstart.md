@@ -43,7 +43,7 @@ The original RARE-PHENIX Module 2 used retrieval-augmented generation. This ligh
 Install the researcher dependencies:
 
 ~~~bash
-python -m pip install -r requirements_module1_hf.txt
+python -m pip install -r requirements_module2_lightweight.txt
 ~~~
 
 ## Run Module 1 first

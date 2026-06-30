@@ -5,3 +5,7 @@ peft>=0.13.0
 huggingface_hub>=0.25.0
 sentencepiece>=0.2.0
 safetensors>=0.4.5
+pandas>=2.2.0
+openpyxl>=3.1.0
+rapidfuzz>=3.9.0
+sentence-transformers>=3.0.0

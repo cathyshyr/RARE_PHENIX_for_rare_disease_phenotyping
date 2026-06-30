@@ -55,12 +55,20 @@ Available RareDis adapters:
 | `shyrcathy/rare-phenix-llama2-13b-raredis` | `meta-llama/Llama-2-13b-chat-hf` | Larger model; requires more memory |
 | `shyrcathy/rare-phenix-llama2-70b-raredis` | `meta-llama/Llama-2-70b-chat-hf` | Highest-resource option; use on appropriate GPU infrastructure |
 
-These adapters are trained on the public RareDis corpus and are **not** the full UDN-trained RARE-PHENIX model described in the manuscript. Users must separately have access to the corresponding gated Meta Llama-2 base model through Hugging Face.
+These adapters are trained on the public RareDis corpus and are **not** the full Undiagnosed Diseases Network (UDN)-trained RARE-PHENIX model described in the manuscript. Users must separately have access to the corresponding gated Meta Llama-2 base model through Hugging Face.
 
 This quickstart runs **Module 1 only**. Modules 2 and 3 are responsible for HPO standardization and HPO prioritization.
 
 ---
 
+
+## Citation
+
+If you use RARE-PHENIX or the public Module 1 adapters, please cite:
+
+Shyr, C., Hu, Y., Tinker, R.J., Cassini, T.A., Byram, K.W., Hamid, R., Fabbri, D.V., Wright, A., Peterson, J.F., Bastarache, L., and Xu, H. 2026. *An artificial intelligence framework for end-to-end rare disease phenotyping from clinical notes using large language models*. arXiv preprint arXiv:2602.20324.
+
+---
 
 ## Preprocessing & Training
 

@@ -8,8 +8,10 @@ This folder contains RARE-PHENIX scripts.
 |---|---|
 | `run_module1_extraction.py` | Runs Module 1 phenotype extraction using the public Hugging Face LoRA adapters. |
 | `run_module2_hpo_standardization.py` | Runs lightweight Module 2 HPO standardization using lexical, semantic, or combined matching. |
+| `run_module3_hpo_prioritization.py` | Runs lightweight Module 3 HPO prioritization by aggregating Module 2 candidates into patient-level ranked HPO lists. |
 | `smoke_test_module1_hf.py` | Checks that the Module 1 Hugging Face adapter can be loaded and used. Requires access to the gated Llama-2 base model. |
 | `smoke_test_module2_lightweight.py` | Fast local smoke test for lightweight Module 2. Does not require Llama-2 access. |
+| `smoke_test_module3_lightweight.py` | Fast local smoke test for lightweight Module 3. |
 | `smoke_test_quickstart.py` | Runs both Module 1 and Module 2 smoke tests. Requires access to the gated Llama-2 base model. |
 
 ## Module 1
@@ -52,3 +54,18 @@ Other available methods:
 ## Notes
 
 The lightweight Module 2 script is intended to be easy to run locally. It is not a full replacement for the original RAG-based Module 2 workflow used in the RARE-PHENIX research pipeline.
+
+
+## Lightweight Module 3
+
+Run patient-level HPO prioritization on Module 2 output:
+
+~~~bash
+python scripts/run_module3_hpo_prioritization.py \
+  --input outputs/module2_hpo_candidates.csv \
+  --output outputs/module3_prioritized_hpos.csv \
+  --max-candidate-rank 5 \
+  --top-n 30
+~~~
+
+The lightweight Module 3 script aggregates Module 2 candidates into patient-level prioritized HPO lists. It is not the original supervised learning-to-rank training workflow.

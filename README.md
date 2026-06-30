@@ -22,6 +22,46 @@ Please note that these are adapter checkpoints, not standalone full model weight
 
 # RARE-PHENIX Pipeline Structure
 
+## Quickstart: Module 1 Hugging Face adapters
+
+A runnable path is available for **RARE-PHENIX Module 1 phenotype extraction** using Hugging Face PEFT/LoRA adapters.
+
+Start here:
+
+~~~bash
+python3 -m venv rare-phenix-env
+source rare-phenix-env/bin/activate
+python -m pip install -U pip
+python -m pip install -r requirements_module1_hf.txt
+hf auth login
+python scripts/run_module1_extraction.py \
+  --input examples/sample_notes.csv \
+  --id-column patient_id \
+  --text-column note_text \
+  --output outputs/module1_extracted.csv
+~~~
+
+See the full quickstart:
+
+~~~text
+docs/module1_hf_quickstart.md
+~~~
+
+Available RareDis adapters:
+
+| Adapter | Base model | Suggested use |
+|---|---|---|
+| `shyrcathy/rare-phenix-llama2-7b-raredis` | `meta-llama/Llama-2-7b-chat-hf` | Start here; easiest to test |
+| `shyrcathy/rare-phenix-llama2-13b-raredis` | `meta-llama/Llama-2-13b-chat-hf` | Larger model; requires more memory |
+| `shyrcathy/rare-phenix-llama2-70b-raredis` | `meta-llama/Llama-2-70b-chat-hf` | Highest-resource option; use on appropriate GPU infrastructure |
+
+These adapters are trained on the public RareDis corpus and are **not** the full UDN-trained RARE-PHENIX model described in the manuscript. Users must separately have access to the corresponding gated Meta Llama-2 base model through Hugging Face.
+
+This quickstart runs **Module 1 only**. Modules 2 and 3 are responsible for HPO standardization and HPO prioritization.
+
+---
+
+
 ## Preprocessing & Training
 
 ### `Preprocess_Clinical_Notes.py`

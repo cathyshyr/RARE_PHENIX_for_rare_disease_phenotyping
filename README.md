@@ -109,6 +109,22 @@ python scripts/run_module2_hpo_standardization.py \
 
 The first command extracts phenotype mentions from notes. The second command maps extracted phenotype strings to candidate HPO terms.
 
+## Optional validation
+
+Run the lightweight Module 2 smoke test:
+
+~~~bash
+python scripts/smoke_test_module2_lightweight.py
+~~~
+
+Run the combined quickstart smoke test:
+
+~~~bash
+python scripts/smoke_test_quickstart.py
+~~~
+
+The combined smoke test runs both the Module 1 Hugging Face adapter test and the lightweight Module 2 test. It requires access to the gated Llama-2 base model on Hugging Face.
+
 ---
 
 

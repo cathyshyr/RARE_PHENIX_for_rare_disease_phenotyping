@@ -12,7 +12,9 @@ The public version of this repository provides a runnable researcher-facing work
 
 The full RARE-PHENIX study used Undiagnosed Diseases Network (UDN)-derived data. These data contain sensitive patient information and are subject to controlled-access data sharing policies. For that reason, this public repository does **not** release UDN-trained checkpoints, UDN patient-level data, or the original supervised Module 3 trained rankers.
 
-To support reproducibility and public use, we release **RareDis-only Module 1 PEFT/LoRA adapters** on Hugging Face. These adapters were fine-tuned only on the public RareDis corpus. These adapters were fine-tuned only on the publicly released RareDis corpus. RareDis is a biomedical NLP corpus annotated for rare diseases, clinical manifestations such as signs and symptoms, and relations among them. Reference: Martínez-de Miguel, C., Segura-Bedmar, I., Chacón-Solano, E., & Guerrero-Aspizua, S. (2022). The RareDis corpus: A corpus annotated with rare diseases, their signs and symptoms. Journal of Biomedical Informatics, 125, 103961. DOI: 10.1016/j.jbi.2021.103961.
+To support reproducibility and public use, we release **RareDis-only Module 1 PEFT/LoRA adapters** on Hugging Face. These adapters were fine-tuned only on the public RareDis corpus. These adapters were fine-tuned only on the publicly released RareDis corpus. RareDis is a biomedical NLP corpus annotated for rare diseases, clinical manifestations such as signs and symptoms, and relations among them. 
+
+Reference: Martínez-de Miguel, C., Segura-Bedmar, I., Chacón-Solano, E., & Guerrero-Aspizua, S. (2022). The RareDis corpus: A corpus annotated with rare diseases, their signs and symptoms. Journal of Biomedical Informatics, 125, 103961. DOI: 10.1016/j.jbi.2021.103961.
 
 The public Module 2 and Module 3 scripts are lightweight researcher-facing alternatives intended to make the repository runnable end-to-end. They are not the original RAG-based Module 2 and supervised learning-to-rank Module 3 workflows propsed in the manuscript.
 

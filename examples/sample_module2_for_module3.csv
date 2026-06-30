@@ -1,0 +1,9 @@
+UID,Step1_Clean_Split,method,rank,match_score,hpo_id,hpo_label,hpo_definition
+P001,global developmental delay,combined,1,116.888,HP:0001263,Global developmental delay,
+P001,hypotonia,combined,1,116.253,HP:0001252,Hypotonia,
+P001,microcephaly,combined,1,116.264,HP:0000252,Microcephaly,
+P001,feeding difficulties,combined,1,116.491,HP:0011968,Feeding difficulties,
+P001,short stature,combined,1,116.174,HP:0004322,Short stature,
+P002,scoliosis,combined,1,115.429,HP:0002650,Scoliosis,
+P002,myopia,combined,1,116.629,HP:0000545,Myopia,
+P002,recurrent respiratory infections,combined,1,117.258,HP:0002205,Recurrent respiratory infections,

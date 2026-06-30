@@ -129,6 +129,11 @@ def main():
     parser.add_argument("--max-new-tokens", type=int, default=256)
     parser.add_argument("--device", default=None, help="Device override: mps, cuda, or cpu.")
     parser.add_argument("--include-raw-output", action="store_true", help="Include raw uncleaned model output in the output CSV.")
+    parser.add_argument(
+        "--module2-output",
+        default=None,
+        help="Optional long-format CSV for Module 2 compatibility with columns UID and Step1_Clean_Split.",
+    )
     args = parser.parse_args()
 
     input_path = Path(args.input)
@@ -180,6 +185,9 @@ def main():
     if args.include_raw_output:
         output_fields.insert(1, "raw_model_output")
 
+    module2_rows = []
+    seen_by_uid = {}
+
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=output_fields)
         writer.writeheader()
@@ -207,7 +215,30 @@ def main():
 
             writer.writerow(output_row)
 
+            # Module 2 compatibility: one deduplicated phenotype per row.
+            seen = seen_by_uid.setdefault(note_id, set())
+            for span in spans:
+                span_clean = span.strip()
+                span_key = span_clean.lower()
+                if span_clean and span_key not in seen:
+                    module2_rows.append({
+                        "UID": note_id,
+                        "Step1_Clean_Split": span_clean,
+                    })
+                    seen.add(span_key)
+
     print(f"Done. Wrote: {output_path}")
+
+    if args.module2_output:
+        module2_output_path = Path(args.module2_output)
+        module2_output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with module2_output_path.open("w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=["UID", "Step1_Clean_Split"])
+            writer.writeheader()
+            writer.writerows(module2_rows)
+
+        print(f"Done. Wrote Module 2-compatible file: {module2_output_path}")
 
 
 if __name__ == "__main__":

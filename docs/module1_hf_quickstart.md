@@ -11,21 +11,25 @@ This runs **Module 1 only** of RARE-PHENIX:
 
 This does **not** run the full end-to-end RARE-PHENIX pipeline. Modules 2 and 3 are responsible for HPO standardization and HPO prioritization.
 
-## Public adapter
+## Public adapters
 
-The default adapter is:
+The default adapter is the 7B model:
 
 ~~~text
 shyrcathy/rare-phenix-llama2-7b-raredis
 ~~~
 
-This is a PEFT/LoRA adapter trained on the public RareDis corpus. It is not the full UDN-trained RARE-PHENIX model described in the paper.
+Available public RareDis adapters:
 
-Users must separately have access to the corresponding Meta Llama-2 base model:
+| Adapter | Base model | Suggested use |
+|---|---|---|
+| `shyrcathy/rare-phenix-llama2-7b-raredis` | `meta-llama/Llama-2-7b-chat-hf` | Start here; easiest to test |
+| `shyrcathy/rare-phenix-llama2-13b-raredis` | `meta-llama/Llama-2-13b-chat-hf` | Larger model; requires more memory |
+| `shyrcathy/rare-phenix-llama2-70b-raredis` | `meta-llama/Llama-2-70b-chat-hf` | Highest-resource option; use on appropriate GPU infrastructure |
 
-~~~text
-meta-llama/Llama-2-7b-chat-hf
-~~~
+These are PEFT/LoRA adapters trained on the public RareDis corpus. They are not the full UDN-trained RARE-PHENIX models described in the paper.
+
+Users must separately have access to the corresponding gated Meta Llama-2 base model through Hugging Face.
 
 ## Install
 

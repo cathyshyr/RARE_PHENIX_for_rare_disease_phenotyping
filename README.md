@@ -59,6 +59,30 @@ These adapters are trained on the public RareDis corpus and are **not** the full
 
 This quickstart runs **Module 1 only**. Modules 2 and 3 are responsible for HPO standardization and HPO prioritization.
 
+## Quickstart: lightweight Module 2 HPO standardization
+
+A lightweight, researcher-friendly Module 2 script is also available. It standardizes extracted phenotype strings to candidate Human Phenotype Ontology (HPO) terms using lexical and semantic retrieval.
+
+Start after generating the Module 2-compatible output from Module 1:
+
+~~~bash
+python scripts/run_module2_hpo_standardization.py \
+  --input outputs/module1_for_module2.csv \
+  --id-column UID \
+  --phenotype-column Step1_Clean_Split \
+  --hpo-terms data/HPO_ID_TERM_DEFN.xlsx \
+  --output outputs/module2_hpo_candidates.csv \
+  --top-k 5
+~~~
+
+See the full quickstart:
+
+~~~text
+docs/module2_lightweight_quickstart.md
+~~~
+
+This lightweight script is intended to be easier for researchers to run than the original RAG-based Module 2 script. It does not require running a large LLM.
+
 ---
 
 

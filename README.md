@@ -14,7 +14,7 @@ The full RARE-PHENIX study used Undiagnosed Diseases Network (UDN)-derived data.
 
 To support reproducibility and public use, we release **RareDis-only Module 1 PEFT/LoRA adapters** on Hugging Face. These adapters were fine-tuned only on the public RareDis corpus.
 
-The public Module 2 and Module 3 scripts are lightweight researcher-facing alternatives intended to make the repository runnable end-to-end. They are not exact reproductions of the original RAG-based Module 2 and supervised learning-to-rank Module 3 workflows used in the manuscript.
+The public Module 2 and Module 3 scripts are lightweight researcher-facing alternatives intended to make the repository runnable end-to-end. They are not the original RAG-based Module 2 and supervised learning-to-rank Module 3 workflows propsed in the manuscript.
 
 ## Public Hugging Face adapters for Module 1
 

@@ -68,6 +68,17 @@ python scripts/run_module1_extraction.py \
   --output outputs/module1_extracted.csv
 ~~~
 
+To also write a long-format file that is compatible with Module 2:
+
+~~~bash
+python scripts/run_module1_extraction.py \
+  --input examples/sample_notes.csv \
+  --id-column patient_id \
+  --text-column note_text \
+  --output outputs/module1_extracted.csv \
+  --module2-output outputs/module1_for_module2.csv
+~~~
+
 ## Output columns
 
 The output CSV contains:
@@ -108,3 +119,23 @@ If you use RARE-PHENIX or the public Module 1 adapters, please cite:
 Shyr, C., Hu, Y., Tinker, R.J., Cassini, T.A., Byram, K.W., Hamid, R., Fabbri, D.V., Wright, A., Peterson, J.F., Bastarache, L., and Xu, H. 2026. *An artificial intelligence framework for end-to-end rare disease phenotyping from clinical notes using large language models*. arXiv preprint arXiv:2602.20324.
 
 ---
+
+## Module 2-compatible output
+
+The optional `--module2-output` file is a long-format CSV with one extracted phenotype per row.
+
+| Column | Description |
+|---|---|
+| `UID` | Patient or note identifier |
+| `Step1_Clean_Split` | Extracted phenotype string, deduplicated within each UID |
+
+Example:
+
+~~~text
+UID,Step1_Clean_Split
+P001,global developmental delay
+P001,hypotonia
+P001,microcephaly
+~~~
+
+This format is intended to be compatible with the existing Module 2 HPO standardization script.
